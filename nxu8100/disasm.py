@@ -190,7 +190,9 @@ INSTRUCTION_TABLE = [
     Instruction('BAL',  'Radr', None, [], '1100_1110_rrrr_rrrr', None),
 
     # Sign Extension Instruction
-    Instruction('EXTBW', 'ERn', None, [Z, S], '1000_nnn1_nnn0_1111', None),
+    # This format needed to be fixed to properly fit to our parser
+    # Instruction('EXTBW', 'ERn', None, [Z, S], '1000_nnn1_nnn0_1111', None),
+    Instruction('EXTBW', 'ERn', None, [Z, S], '1000_mmm1_nnn0_1111', None),
 
     # Software Interrupt Instructions
     Instruction('SWI', '#snum', None, [MIE], '1110_0101_00ii_iiii', None),
@@ -203,8 +205,8 @@ INSTRUCTION_TABLE = [
     Instruction('BL', 'ERn',  None, [], '1111_0000_nnn0_0011', None),
 
     # Multiplication and Division Instructions
-    Instruction('MUL', 'ERn', 'ERm', [Z],                   '1111_nnn0_mmmm_0100', None),
-    Instruction('DIV', 'ERn', 'ERm', [C, Z],                '1111_nnn0_mmmm_1001', None),
+    Instruction('MUL', 'ERn', 'Rm', [Z],                   '1111_nnn0_mmmm_0100', None),
+    Instruction('DIV', 'ERn', 'Rm', [C, Z],                '1111_nnn0_mmmm_1001', None),
 
     # Miscellaneous
     Instruction('INC', '[EA]', None, [Z, S, OV, HC],         '1111_1110_0010_1111', None),
@@ -304,11 +306,11 @@ def _figure_operand(mnemonic: str, format: str, m, next_pc: int):
     elif format in ['[EA+]', '[EA]']:
         return None
     elif format.startswith('[ER'):
-        return m[format[3:-1]]
+        return m[format[3:-1]] * 2
     elif format.startswith('Disp'):
         arr = [m['D']]
         if '[ER' in format:
-            arr.append(m[format[format.index('[')+3:-1]])
+            arr.append(m[format[format.index('[')+3:-1]] * 2)
         return arr
     elif format.startswith('R'):
         if '.bit_offset' in format:
@@ -316,11 +318,11 @@ def _figure_operand(mnemonic: str, format: str, m, next_pc: int):
         else:
             return m[format[1:]]
     elif format.startswith('ER'):
-        return m[format[2:]]
+        return m[format[2:]] * 2
     elif format.startswith('XR'):
-        return m[format[2:]]
+        return m[format[2:]] * 4
     elif format.startswith('QR'):
-        return m[format[2:]]
+        return m[format[2:]] * 8
     elif format in ['SP', 'PSW', 'DSR']:
         return format
     elif format in ['#imm8', '#imm7', '#unsigned8', '#snum']:

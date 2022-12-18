@@ -264,7 +264,7 @@ class Nxu8100(Architecture):
                 tokens.append(InstructionTextToken(InstructionTextTokenType.TextToken, ':'))
 
             tokens.append(InstructionTextToken(InstructionTextTokenType.TextToken, f'['))
-            tokens.append(InstructionTextToken(InstructionTextTokenType.RegisterToken, f'ER{value*2}'))
+            tokens.append(InstructionTextToken(InstructionTextTokenType.RegisterToken, f'ER{value}'))
             tokens.append(InstructionTextToken(InstructionTextTokenType.EndMemoryOperandToken, ']'))
         elif format.startswith('R'):
             if 'bit_offset' in format:
@@ -274,11 +274,11 @@ class Nxu8100(Architecture):
             else:
                 tokens.append(InstructionTextToken(InstructionTextTokenType.RegisterToken, f'R{value}'))
         elif format.startswith('ER'):
-            tokens.append(InstructionTextToken(InstructionTextTokenType.RegisterToken, f'ER{value*2}'))
+            tokens.append(InstructionTextToken(InstructionTextTokenType.RegisterToken, f'ER{value}'))
         elif format.startswith('XR'):
-            tokens.append(InstructionTextToken(InstructionTextTokenType.RegisterToken, f'XR{value*4}'))
+            tokens.append(InstructionTextToken(InstructionTextTokenType.RegisterToken, f'XR{value}'))
         elif format.startswith('QR'):
-            tokens.append(InstructionTextToken(InstructionTextTokenType.RegisterToken, f'QR{value*8}'))
+            tokens.append(InstructionTextToken(InstructionTextTokenType.RegisterToken, f'QR{value}'))
         elif format.startswith('#'):
             tokens.append(InstructionTextToken(InstructionTextTokenType.TextToken, '#'))
             tokens.append(InstructionTextToken(InstructionTextTokenType.IntegerToken, str(value), value=value))
@@ -375,41 +375,41 @@ class Nxu8100(Architecture):
             if decoded.mnemonic == 'ADD':
                 if inst.first_operand == 'ERn':
                     sz = 2
-                    opr1 = il.reg(2, f'ER{oprs[0]}')
+                    opr1 = f'ER{oprs[0]}'
                     if inst.second_operand == 'ERm':
                         opr2 = il.reg(2, f'ER{oprs[1]}')
                     else:
                         opr2 = il.const(1, oprs[1])
                 elif inst.first_operand == 'Rn':
                     sz = 1
-                    opr1 = il.reg(2, f'R{oprs[0]}')
+                    opr1 = f'R{oprs[0]}'
                     if inst.second_operand == 'Rm':
-                        opr2 = il.reg(2, f'R{oprs[1]}')
+                        opr2 = il.reg(1, f'R{oprs[1]}')
                     else:
                         opr2 = il.const(1, oprs[1])
                 elif inst.first_operand == 'SP':
                     sz = 2
-                    opr1 = il.reg(2, 'SP')
+                    opr1 = 'SP'
                     opr2 = il.const(1, oprs[1])
                 else:
                     assert False
-                _ = il.set_reg(sz, f'R{oprs[0]}', il.add(sz, opr1, opr2, flags))
+                _ = il.set_reg(sz, opr1, il.add(sz, il.reg(sz, opr1), opr2, flags))
 
             elif decoded.mnemonic == 'ADDC':
-                opr1 = il.reg(1, f'R{oprs[1]}')
+                opr1 = il.reg(1, f'R{oprs[0]}')
                 if inst.second_operand == 'Rm':
-                    opr2 = il.const(1, f'R{oprs[1]}')
+                    opr2 = il.reg(1, f'R{oprs[1]}')
                 else:
                     opr2 = il.const(1, oprs[1])
-                _ = il.set_reg(1, f'R{oprs[1]}', il.add_carry(1, opr1, opr2, il.flag('C')))
+                _ = il.set_reg(1, f'R{oprs[0]}', il.add_carry(1, opr1, opr2, il.flag('C')))
 
             elif decoded.mnemonic == 'AND':
-                opr1 = il.reg(1, f'R{oprs[1]}')
+                opr1 = il.reg(1, f'R{oprs[0]}')
                 if inst.second_operand == 'Rm':
-                    opr2 = il.const(1, f'R{oprs[1]}')
+                    opr2 = il.reg(1, f'R{oprs[1]}')
                 else:
                     opr2 = il.const(1, oprs[1])
-                _ = il.set_reg(1, f'R{oprs[1]}', il.and_expr(1, opr1, opr2))
+                _ = il.set_reg(1, f'R{oprs[0]}', il.and_expr(1, opr1, opr2))
 
             elif decoded.mnemonic == 'B':
                 if inst.first_operand == 'ERn':
@@ -515,9 +515,9 @@ class Nxu8100(Architecture):
                         opr2 = il.const(1, oprs[1])
                 elif inst.first_operand == 'Rn':
                     sz = 1
-                    opr1 = il.reg(2, f'R{oprs[0]}')
+                    opr1 = il.reg(1, f'R{oprs[0]}')
                     if inst.second_operand == 'Rm':
-                        opr2 = il.reg(2, f'R{oprs[1]}')
+                        opr2 = il.reg(1, f'R{oprs[1]}')
                     else:
                         opr2 = il.const(1, oprs[1])
                 else:
@@ -527,9 +527,9 @@ class Nxu8100(Architecture):
                 _ = il.sub(sz, opr1, opr2, flags)
 
             elif decoded.mnemonic == 'CMPC':
-                opr1 = il.reg(1, f'R{oprs[1]}')
+                opr1 = il.reg(1, f'R{oprs[0]}')
                 if inst.second_operand == 'Rm':
-                    opr2 = il.const(1, f'R{oprs[1]}')
+                    opr2 = il.reg(1, f'R{oprs[1]}')
                 else:
                     opr2 = il.const(1, oprs[1])
                 _ = il.sub_borrow(1, opr1, opr2, il.flag('C'), flags)
@@ -619,14 +619,14 @@ class Nxu8100(Architecture):
                 elif inst.first_operand == 'Dadr':
                     _ = il.set_reg(2, 'EA', il.const(2, oprs[0]))
                 elif inst.first_operand == 'Disp16[ERm]':
-                    _ = il.set_reg(2, 'EA', il.add(2, il.reg(2, f'ER{oprs[1]}'), il.const(2, oprs[0])))
+                    _ = il.set_reg(2, 'EA', il.add(2, il.reg(2, f'ER{oprs[0][1]}'), il.const(2, oprs[0][0])))
                 else:
                     assert False, f'LEA with invalid operand {inst.first_operand}'
 
             elif decoded.mnemonic == 'MOV':
                 if inst.first_operand == 'PSW':
                     log_warn('TODO: handle PSW properly')
-                    return None
+                    _ = il.unimplemented()
 
                 elif inst.first_operand == 'ERn':
                     if inst.second_operand == 'ERm':
@@ -644,6 +644,8 @@ class Nxu8100(Architecture):
                         opr2 = il.reg(1, f'R{oprs[1]}')
                     elif inst.second_operand == '#imm8':
                         opr2 = il.const(1, oprs[1])
+                    elif inst.second_operand == 'PSW':
+                        opr2 = il.reg(1, 'PSW')
                     else:
                         assert False, f'MOV Rn with invalid second operand {inst.second_operand}'
                     _ = il.set_reg(1, f'R{oprs[0]}', opr2)
@@ -668,12 +670,12 @@ class Nxu8100(Architecture):
                 _ = il.nop()
 
             elif decoded.mnemonic == 'OR':
-                opr1 = il.reg(1, f'R{oprs[1]}')
+                opr1 = il.reg(1, f'R{oprs[0]}')
                 if inst.second_operand == 'Rm':
-                    opr2 = il.const(1, f'R{oprs[1]}')
+                    opr2 = il.reg(1, f'R{oprs[1]}')
                 else:
                     opr2 = il.const(1, oprs[1])
-                _ = il.set_reg(1, f'R{oprs[1]}', il.or_expr(1, opr1, opr2))
+                _ = il.set_reg(1, f'R{oprs[0]}', il.or_expr(1, opr1, opr2))
 
             elif decoded.mnemonic == 'RC':
                 _ = il.set_flag('C', il.const(1, 0))
@@ -702,12 +704,12 @@ class Nxu8100(Architecture):
                 _ = il.set_flag('Z', il.not_expr(1, il.test_bit(1, val, il.const(1, oprs[0][1]))))
 
             elif decoded.mnemonic == 'XOR':
-                opr1 = il.reg(1, f'R{oprs[1]}')
+                opr1 = il.reg(1, f'R{oprs[0]}')
                 if inst.second_operand == 'Rm':
-                    opr2 = il.const(1, f'R{oprs[1]}')
+                    opr2 = il.reg(1, f'R{oprs[1]}')
                 else:
                     opr2 = il.const(1, oprs[1])
-                _ = il.set_reg(1, f'R{oprs[1]}', il.xor_expr(1, opr1, opr2))
+                _ = il.set_reg(1, f'R{oprs[0]}', il.xor_expr(1, opr1, opr2))
             
             else:
                 _ = il.unimplemented()
