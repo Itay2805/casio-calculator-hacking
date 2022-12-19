@@ -4,8 +4,8 @@ import codecs
 from .disasm import decode_instruction, DecodedInstruction, PushRegisterList, PopRegisterList
 
 
-def _prepare_flags():
-    pass
+SEGMENT_0_EMULATION = False
+SEGMENT_0_DATA_OFFSET = 0x100000
 
 
 class Nxu8100(Architecture):
@@ -173,6 +173,7 @@ class Nxu8100(Architecture):
             tokens.append(InstructionTextToken(InstructionTextTokenType.BeginMemoryOperandToken, ''))
 
             # DSR prefix
+            offset = 0
             if decoded.dsr_format == 'Rd':
                 tokens.append(InstructionTextToken(InstructionTextTokenType.RegisterToken, f'R{decoded.dsr_operand}'))
                 tokens.append(InstructionTextToken(InstructionTextTokenType.TextToken, ':'))
@@ -182,8 +183,10 @@ class Nxu8100(Architecture):
             elif decoded.dsr_format == 'DSR':
                 tokens.append(InstructionTextToken(InstructionTextTokenType.RegisterToken, f'DSR'))
                 tokens.append(InstructionTextToken(InstructionTextTokenType.TextToken, ':'))
+            elif SEGMENT_0_EMULATION:
+                offset = SEGMENT_0_DATA_OFFSET
 
-            tokens.append(InstructionTextToken(InstructionTextTokenType.PossibleAddressToken, f'{value:04x}', value=value))
+            tokens.append(InstructionTextToken(InstructionTextTokenType.PossibleAddressToken, f'{value:04x}', value=value + offset))
             tokens.append(InstructionTextToken(InstructionTextTokenType.EndMemoryOperandToken, ''))
 
         elif format == 'Cadr':
@@ -231,6 +234,7 @@ class Nxu8100(Architecture):
             tokens.append(InstructionTextToken(InstructionTextTokenType.BeginMemoryOperandToken, ''))
 
             # DSR prefix
+            offset = 0
             if decoded.dsr_format == 'Rd':
                 tokens.append(InstructionTextToken(InstructionTextTokenType.RegisterToken, f'R{decoded.dsr_operand}'))
                 tokens.append(InstructionTextToken(InstructionTextTokenType.TextToken, ':'))
@@ -363,7 +367,10 @@ class Nxu8100(Architecture):
                 elif decoded.dsr_format == 'DSR':
                     r = il.reg(1, 'DSR')
                 else:
-                    return adr
+                    if SEGMENT_0_EMULATION:
+                        return il.add(3, adr, il.const(3, SEGMENT_0_DATA_OFFSET))
+                    else:
+                        return adr
                 return full_adr(r, adr)
 
             flags = ''.join(inst.flags)
@@ -595,7 +602,7 @@ class Nxu8100(Architecture):
                     reg = il.reg(2, 'ER14')
                     adr = il.add(2, base, reg)
                 elif inst.second_operand == 'Dadr':
-                    adr = il.const(1, oprs[1])
+                    adr = il.const(2, oprs[1])
                 else:
                     assert False, f"Invalid L operand {inst.second_operand}"
 
