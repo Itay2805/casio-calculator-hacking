@@ -604,7 +604,7 @@ class Nxu8100(Architecture):
 
                 # Handle opcode
                 if inst.mnemonic == 'L':
-                    _ = il.set_reg(sz, value, il.load(sz, adr))
+                    _ = il.set_reg(sz, value, il.load(sz, adr), flags)
                 else:
                     _ = il.store(sz, adr, il.reg(sz, value))
 
@@ -677,6 +677,51 @@ class Nxu8100(Architecture):
                     opr2 = il.const(1, oprs[1])
                 _ = il.set_reg(1, f'R{oprs[0]}', il.or_expr(1, opr1, opr2))
 
+            elif decoded.mnemonic == 'POP':
+                if inst.first_operand == 'register_list':
+                    p: PopRegisterList = oprs[0]
+                    if p & PopRegisterList.EA:
+                        il.append(il.set_reg(2, 'EA', il.pop(2)))
+                    if p & PopRegisterList.LR:
+                        il.append(il.set_reg(2, 'LR', il.pop(2)))
+                    if p & PopRegisterList.PSW: # TODO: is this two bytes?
+                        log_warn('TODO: POP PSW: reset flags')
+                        il.append(il.set_reg(2, 'PSW', il.pop(2)))
+                    if p & PopRegisterList.PC:
+                        il.append(il.ret(il.pop(2)))
+                elif inst.first_operand == 'Rn':
+                    _ = il.set_reg(1, f'R{oprs[0]}', il.pop(1))
+                elif inst.first_operand == 'ERn':
+                    _ = il.set_reg(2, f'ER{oprs[0]}', il.pop(2))
+                elif inst.first_operand == 'XRn':
+                    _ = il.set_reg(4, f'XR{oprs[0]}', il.pop(4))
+                elif inst.first_operand == 'QRn':
+                    _ = il.set_reg(8, f'QR{oprs[0]}', il.pop(8))
+                else:
+                    assert False
+
+            elif decoded.mnemonic == 'PUSH':
+                if inst.first_operand == 'register_list':
+                    p: PushRegisterList = oprs[0]
+                    if p & PushRegisterList.ELR:
+                        il.append(il.push(2, il.reg(2, 'ELR')))
+                    if p & PushRegisterList.EPSW: # TODO: is this two bytes?
+                        il.append(il.push(2, il.reg(2, 'EPSW')))
+                    if p & PushRegisterList.LR:
+                        il.append(il.push(2, il.reg(2, 'LR')))
+                    if p & PushRegisterList.EA:
+                        il.append(il.push(2, il.reg(2, 'EA')))
+                elif inst.first_operand == 'Rn':
+                    _ = il.push(1, il.reg(1, f'R{oprs[0]}'))
+                elif inst.first_operand == 'ERn':
+                    _ = il.push(2, il.reg(2, f'ER{oprs[0]}'))
+                elif inst.first_operand == 'XRn':
+                    _ = il.push(4, il.reg(4, f'XR{oprs[0]}'))
+                elif inst.first_operand == 'QRn':
+                    _ = il.push(8, il.reg(8, f'QR{oprs[0]}'))
+                else:
+                    assert False
+
             elif decoded.mnemonic == 'RC':
                 _ = il.set_flag('C', il.const(1, 0))
 
@@ -689,12 +734,12 @@ class Nxu8100(Architecture):
             elif decoded.mnemonic == 'SUB':
                 opr1 = il.reg(1, f'R{oprs[0]}')
                 opr2 = il.reg(1, f'R{oprs[1]}')
-                _ = il.set_reg(1, f'R{oprs[0]}', il.sub(1, opr1, opr2))
+                _ = il.set_reg(1, f'R{oprs[0]}', il.sub(1, opr1, opr2, flags))
 
             elif decoded.mnemonic == 'SUBC':
                 opr1 = il.reg(1, f'R{oprs[0]}')
                 opr2 = il.reg(1, f'R{oprs[1]}')
-                _ = il.set_reg(1, f'R{oprs[0]}', il.sub_borrow(1, opr1, opr2, il.flag('C')))
+                _ = il.set_reg(1, f'R{oprs[0]}', il.sub_borrow(1, opr1, opr2, il.flag('C'), flags))
 
             elif decoded.mnemonic == 'TB':
                 if inst.first_operand == 'Dbitadr':
