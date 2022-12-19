@@ -637,7 +637,7 @@ class Nxu8100(Architecture):
                         opr2 = il.reg(2, 'SP')
                     else:
                         assert False, f'MOV ERn with invalid second operand {inst.second_operand}'
-                    _ = il.set_reg(2, f'ER{oprs[0]}', opr2)
+                    _ = il.set_reg(2, f'ER{oprs[0]}', opr2, flags)
 
                 elif inst.first_operand == 'Rn':
                     if inst.second_operand == 'Rm':
@@ -648,7 +648,7 @@ class Nxu8100(Architecture):
                         opr2 = il.reg(1, 'PSW')
                     else:
                         assert False, f'MOV Rn with invalid second operand {inst.second_operand}'
-                    _ = il.set_reg(1, f'R{oprs[0]}', opr2)
+                    _ = il.set_reg(1, f'R{oprs[0]}', opr2, flags)
 
                 elif inst.first_operand == 'SP':
                     er = il.reg(2, f'ER{oprs[1]}')
@@ -660,11 +660,11 @@ class Nxu8100(Architecture):
             elif decoded.mnemonic == 'MUL':
                 opr1 = il.reg(1, f'R{oprs[0]}')
                 opr2 = il.reg(1, f'R{oprs[1]}')
-                _ = il.set_reg(2, f'ER{oprs[0]}', il.mult(2, opr1, opr2))
+                _ = il.set_reg(2, f'ER{oprs[0]}', il.mult(2, opr1, opr2, flags))
 
             elif decoded.mnemonic == 'NEG':
                 r = il.reg(1, f'R{oprs[0]}')
-                _ = il.set_reg(1, f'R{oprs[0]}', il.neg_expr(1, r))
+                _ = il.set_reg(1, f'R{oprs[0]}', il.neg_expr(1, r, flags))
 
             elif decoded.mnemonic == 'NOP':
                 _ = il.nop()
@@ -675,7 +675,7 @@ class Nxu8100(Architecture):
                     opr2 = il.reg(1, f'R{oprs[1]}')
                 else:
                     opr2 = il.const(1, oprs[1])
-                _ = il.set_reg(1, f'R{oprs[0]}', il.or_expr(1, opr1, opr2))
+                _ = il.set_reg(1, f'R{oprs[0]}', il.or_expr(1, opr1, opr2, flags))
 
             elif decoded.mnemonic == 'POP':
                 if inst.first_operand == 'register_list':
@@ -754,7 +754,7 @@ class Nxu8100(Architecture):
                     opr2 = il.reg(1, f'R{oprs[1]}')
                 else:
                     opr2 = il.const(1, oprs[1])
-                _ = il.set_reg(1, f'R{oprs[0]}', il.xor_expr(1, opr1, opr2))
+                _ = il.set_reg(1, f'R{oprs[0]}', il.xor_expr(1, opr1, opr2, flags))
             
             else:
                 _ = il.unimplemented()
